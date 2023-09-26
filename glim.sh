@@ -103,7 +103,7 @@ if [[ $EFI == true && ! -d /usr/lib/grub/x86_64-efi ]]; then
     echo "ERROR: neither support for BIOS or EFI was found"
     exit 1
   else
-    echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-x64-modules rpm missing?)"
+    echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-x64-modules rpm or grub-efi-amd64-bin deb missing?)"
   fi
 fi
 
@@ -149,8 +149,8 @@ else
 fi
 
 # Copy GRUB2 configuration
-echo "Running rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR} ..."
-${CMD_PREFIX} rsync -rpt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts --exclude=icons/originals ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR}
+echo "Running rsync -rt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR} ..."
+${CMD_PREFIX} rsync -rt --delete --exclude=i386-pc --exclude=x86_64-efi --exclude=fonts ${GRUB2_CONF}/ ${USBMNT}/boot/${GRUB2_DIR}
 if [[ $? -ne 0 ]]; then
   echo "ERROR: the rsync copy returned with an error exit status."
   exit 1
@@ -158,5 +158,15 @@ fi
 
 # Be nice and pre-create the directory, and mention it
 [[ -d ${USBMNT}/boot/iso ]] || ${CMD_PREFIX} mkdir ${USBMNT}/boot/iso
-echo "GLIM installed! Time to populate the boot/iso directory."
+echo "GLIM installed! Time to populate the boot/iso/ sub-directories."
+
+# Now also pre-create all supported sub-directories since empty are ignored
+args=(
+  -E -n
+  '/\(distro-list-start\)/,/\(distro-list-end\)/{s,^\s+([a-z]+)$,\1,p}'
+)
+
+for DIR in $(sed "${args[@]}" "$(dirname "$0")"/README.md); do
+  [[ -d ${USBMNT}/boot/iso/${DIR} ]] || ${CMD_PREFIX} mkdir ${USBMNT}/boot/iso/${DIR}
+done
 
